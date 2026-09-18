@@ -2,3 +2,10 @@
 __pycache__/
 *.pyc
 .env
+
+# 早报不公开
+digests
+
+# 本地ide不提交
+.idea/
+*.iml
