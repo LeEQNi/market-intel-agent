@@ -3,9 +3,9 @@
 A small AI agent that collects market news and generates a daily summary.
 
 ## Goal
-- Use RSS to touch the world, make your agent as your assistant.
-- Summarize all news send your LLM.
-- And put a port for you, fasillate your life.
+- Use RSS feeds to connect with the world, and let the agent act as your assistant.
+- Send all news to an LLM and summarize it.
+- Compile them into a report for the you.
 
 ## Status
 Just started. Work in progress.

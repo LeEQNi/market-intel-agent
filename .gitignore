@@ -3,8 +3,9 @@ __pycache__/
 *.pyc
 .env
 
-# 早报不公开
+# 本地数据集不公开
 digests
+data
 
 # 本地ide不提交
 .idea/
