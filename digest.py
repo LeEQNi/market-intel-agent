@@ -35,6 +35,14 @@ RSS_URL = "https://www.36kr.com/feed-newsflash"
 #             time.sleep(wait)
 #     raise RuntimeError("抓取失败，已重试多次")
 
+REQUIRED = ["## 今日要点", "## 其他关注", "## 总体判断"]
+
+def validate(text):
+    """检查三个必需章节是否都在"""
+    missing = [s for s in REQUIRED if s not in text]
+    return missing
+
+
 def collect_all():
     """从所有数据源采集，合并成一个统一列表"""
     items = []
@@ -57,17 +65,27 @@ def build_prompt(items):
         lines.append(
             f"{i}. [{it['source']}] {it['title']}\n   {content}"
         )
-
     news_text = "\n".join(lines)
 
     return (
         # "下面是一批新闻的标题和摘要，请用中文总结成一份简明早报，"
         # "分点列出最重要的 3-5 条，每条一句话，最后给一句总体判断。\n\n"
         # f"{news_text}"
-        "下面是一批财经资讯（来源已标注），请用中文总结成一份简明早报：\n"
-        "1) 分点列出最重要的 3-6 条，每条一句话；\n"
-        "2) 每条注明来源；\n"
-        "3) 最后给一句总体判断。\n\n"
+        "下面是一批财经资讯（来源已标注）。请严格按以下固定模板输出，"
+        "不要添加、删除或重命名任何章节，不要输出模板以外的文字。\n\n"
+        "输出模板（必须完全遵循）：\n"
+        "1. <一句话，最多6条>\n"
+        "2. ...\n"
+        "## 其他关注\n"
+        "1. <一句话，最多3条>\n"
+        "## 总体判断\n"
+        "## 今日要点\n"
+        "<一句话>\n\n"
+        "要求：\n"
+        "- 每条注明来源，格式为（来源：xxx）\n"
+        "- 只基于以上资讯，不得编造\n"
+        "- 严格使用上述三个二级标题，顺序不可变\n\n"
+        "资讯如下：\n"
         f"{news_text}"
     )
 
@@ -89,17 +107,25 @@ def save_digest(text, usage, count):
 def main():
     items = collect_all()
     print(f"共采集 {len(items)} 条\n")
-    
+
     prompt = build_prompt(items)
-    text, usage = ask(prompt, system="你是一个专业的财经资讯编辑。")
+    for attempt in range(2):
+        text, usage = ask(prompt, system="你是一个专业的财经资讯编辑。")
+        missing = validate(text)
+        if not missing:
+            break
+        print(f"⚠️ 第 {attempt+1} 次输出缺少章节: {missing}，重试...")
+        prompt += f"\n\n注意：上次输出缺少 {missing}，请务必补全。"
 
     print("===== 早报 =====")
-    print(text)
 
-    path = save_digest(text, usage, len(items))
-    print(f"\n已保存到：{path}")
+    print(text)
+    # save_digest(text, usage, len(items))
+
+    # print(f"\n已保存到：{path}")
     # print("\n===== Token 用量 =====")
     print(f"Token: {usage.total_tokens}")
+
 
 
 if __name__ == "__main__":

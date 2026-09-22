@@ -19,5 +19,7 @@ def ask(prompt, system="你是一个专业助手。"):
             {"role": "system", "content": system},
             {"role": "user", "content": prompt},
         ],
+        temperature=0,  # ← 关键：尽量取最确定输出
+        top_p=1,  # ← 配合 temperature，去掉采样随机
     )
     return resp.choices[0].message.content, resp.usage
