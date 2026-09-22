@@ -37,10 +37,41 @@ RSS_URL = "https://www.36kr.com/feed-newsflash"
 
 REQUIRED = ["## 今日要点", "## 其他关注", "## 总体判断"]
 
+# def validate(text):
+#     """检查三个必需章节是否都在"""
+#     missing = [s for s in REQUIRED if s not in text]
+#     return missing
+
 def validate(text):
-    """检查三个必需章节是否都在"""
-    missing = [s for s in REQUIRED if s not in text]
-    return missing
+    """返回 None 表示通过，否则返回错误原因"""
+    positions = []
+    for h in REQUIRED:
+        idx = text.find(h)
+        if idx == -1:
+            return f"缺少章节: {h}"
+        positions.append(idx)
+
+    # ① 顺序必须正确
+    if positions != sorted(positions):
+        return f"章节顺序错误: {positions}"
+
+    # ② "今日要点"必须排第一（不能有内容在它前面）
+    if positions[0] != 0:
+        # 允许前面有空行，但不能有正文
+        head = text[:positions[0]].strip()
+        if head:
+            return f"'今日要点'前有多余内容: {head[:30]}"
+
+    # ③ 每个章节下必须有内容（标题后不能紧跟另一个标题）
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if line.strip() in REQUIRED:
+            # 往下找下一非空行
+            next_line = next((l for l in lines[i+1:] if l.strip()), "")
+            if next_line.strip() in REQUIRED:
+                return f"章节 '{line.strip()}' 下没有内容"
+
+    return None   # 通过
 
 
 def collect_all():
@@ -74,12 +105,12 @@ def build_prompt(items):
         "下面是一批财经资讯（来源已标注）。请严格按以下固定模板输出，"
         "不要添加、删除或重命名任何章节，不要输出模板以外的文字。\n\n"
         "输出模板（必须完全遵循）：\n"
+        "## 今日要点\n"
         "1. <一句话，最多6条>\n"
         "2. ...\n"
         "## 其他关注\n"
         "1. <一句话，最多3条>\n"
         "## 总体判断\n"
-        "## 今日要点\n"
         "<一句话>\n\n"
         "要求：\n"
         "- 每条注明来源，格式为（来源：xxx）\n"
@@ -111,20 +142,20 @@ def main():
     prompt = build_prompt(items)
     for attempt in range(2):
         text, usage = ask(prompt, system="你是一个专业的财经资讯编辑。")
-        missing = validate(text)
-        if not missing:
+        err = validate(text)
+        if err is None:
             break
-        print(f"⚠️ 第 {attempt+1} 次输出缺少章节: {missing}，重试...")
-        prompt += f"\n\n注意：上次输出缺少 {missing}，请务必补全。"
+        print(f"⚠️ 第 {attempt+1} 次输出缺少章节: {err}，重试...")
+        prompt += f"\n\n注意：上次输出问题 ———— {err}，请严格修正。"
 
-    print("===== 早报 =====")
+    # print("===== 早报 =====")
 
     print(text)
-    # save_digest(text, usage, len(items))
+    save_digest(text, usage, len(items))
 
     # print(f"\n已保存到：{path}")
     # print("\n===== Token 用量 =====")
-    print(f"Token: {usage.total_tokens}")
+    # print(f"Token: {usage.total_tokens}")
 
 
 
