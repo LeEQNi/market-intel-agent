@@ -4,6 +4,7 @@ from datetime import date
 from core.llm import ask
 from core.akshare_fetcher import fetch_cls_news
 from core.fetcher import fetch_rss_news
+from core.store import save_corpus
 # from dotenv import load_dotenv
 # from openai import OpenAI
 
@@ -81,7 +82,10 @@ def collect_all():
     items += fetch_cls_news(limit=15)
     # 源2：36kr RSS
     items += fetch_rss_news(RSS_URL, limit=8, source="36kr")
+    # 调用RAG语料库
+    save_corpus(items)
     return items
+
 
 def build_prompt(items):
     """把新闻拼成给模型的输入"""
